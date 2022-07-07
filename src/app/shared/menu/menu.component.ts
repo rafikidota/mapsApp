@@ -35,10 +35,10 @@ export class MenuComponent implements OnInit {
     {
       route: 'maps/markers',
       name: 'Marcadores'
-    },
-    {
-      route: 'maps/properties',
-      name: 'Propiedades'
+    // },
+    // {
+    //   route: 'maps/properties',
+    //   name: 'Propiedades'
     }
   ];
 }
