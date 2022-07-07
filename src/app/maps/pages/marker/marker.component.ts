@@ -3,8 +3,8 @@ import * as mapboxgl from 'mapbox-gl';
 
 interface MarkerColor {
   color: string;
-  marker: mapboxgl.Marker;
-  center: [number, number];
+  marker?: mapboxgl.Marker;
+  center?: [number, number];
 }
 
 @Component({
@@ -28,10 +28,10 @@ interface MarkerColor {
     `
   ]
 })
-export class MarkerComponent implements AfterViewInit,OnDestroy {
+export class MarkerComponent implements AfterViewInit, OnDestroy {
   @ViewChild('map') divMap!: ElementRef;
   map!: mapboxgl.Map;
-  zoomLevel: number = 15;
+  zoomLevel: number = 12;
   center: [number, number] = [-82.35970147301727, 23.135464380526386];
   markers: MarkerColor[] = [];
   constructor() { }
@@ -51,6 +51,8 @@ export class MarkerComponent implements AfterViewInit,OnDestroy {
     //   element: marker
     // }).setLngLat(this.center).addTo(this.map);
 
+    this.loadLocalStorage();
+
     this.map.on('move', (event) => {
       const target = event.target;
       const { lng, lat } = target.getCenter();
@@ -62,30 +64,78 @@ export class MarkerComponent implements AfterViewInit,OnDestroy {
     this.map.off('move', () => { });
   }
 
+  createMarker(): MarkerColor {
+    const color = "#xxxxxx".replace(/x/g, y => (Math.random() * 16 | 0).toString(16));
+    const newMarker = new mapboxgl.Marker({
+      draggable: true,
+      color: color
+    }).setLngLat(this.center).addTo(this.map);
+    newMarker.on('dragend', () => {
+      this.saveLocalStorage();
+    });
+    return {
+      color: color,
+      marker: newMarker
+    };
+  }
+
+  addMarker() {
+    const mc = this.createMarker();
+    console.log(mc.marker);     
+    this.markers.push({
+      color: mc.color,
+      marker: mc.marker
+    });
+    this.saveLocalStorage();
+  }
+
+  updateMarker() {
+
+  }
+
+  deleteMarker(index: number) {
+    this.markers[index].marker?.remove();
+    this.markers.splice(index, 1);
+    this.saveLocalStorage();
+  }
+
   goToMarker(marker: mapboxgl.Marker) {
     this.map.flyTo({
       center: marker.getLngLat()
     });
   }
 
-  addMarker() {
-    const color = "#xxxxxx".replace(/x/g, y => (Math.random() * 16 | 0).toString(16));
-    const newMarker = new mapboxgl.Marker({
-      draggable: true,
-      color
-    }).setLngLat(this.center).addTo(this.map);
+  saveLocalStorage() {
+    const data: MarkerColor[] = [];
+    this.markers.forEach(m => {
+      const color = m.color;
+      const { lng, lat } = m.marker!.getLngLat();
+      data.push({
+        color: color,
+        center: [lng, lat]
+      });
+    });
+    localStorage.setItem('markers', JSON.stringify(data));
+  }
 
-    this.markers.push({
-      color: color,
-      marker: newMarker,
-      center: this.center
+  loadLocalStorage() {
+    if (!localStorage.getItem('markers')) {
+      return;
+    }
+    const data: MarkerColor[] = JSON.parse(localStorage.getItem('markers')!);
+    data.forEach(m => {
+      const newMarker = new mapboxgl.Marker({
+        draggable: true,
+        color: m.color
+      }).setLngLat(m.center!).addTo(this.map);
+      this.markers.push({
+        color: m.color,
+        marker: newMarker
+      });
+      newMarker.on('dragend', () => {
+        this.saveLocalStorage();
+      });
     });
   }
-  saveLocalStorage(){
-    //localStorage.setItem('markers',this.markers);
 
-  }
-  loadLocalStorage(){
-
-  }
 }
